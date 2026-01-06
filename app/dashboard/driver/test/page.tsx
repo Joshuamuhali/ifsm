@@ -52,7 +52,7 @@ interface TestModule {
   sections: TestSection[]
 }
 
-export default function DriverTestPage() {
+function DriverTestPage() {
   const [user, setUser] = useState<any>(null)
   const [testModule, setTestModule] = useState<TestModule | null>(null)
   const [answers, setAnswers] = useState<Record<string, any>>({})
