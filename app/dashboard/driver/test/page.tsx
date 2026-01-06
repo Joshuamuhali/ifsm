@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { Button } from '@/components/ui/button'
@@ -1219,3 +1219,13 @@ export default function DriverTestPage() {
     </div>
   )
 }
+
+function DriverTestPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading test...</div>}>
+      <DriverTestPage />
+    </Suspense>
+  )
+}
+
+export default DriverTestPageWrapper
