@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabase-client"
 import { ROLE_DASHBOARD_ROUTES } from "@/lib/constants/roles"
@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { ROLES, ROLE_DISPLAY_NAMES, SIGNUP_ROLES } from "@/lib/role-definitions"
 import { Truck, Users, Shield, Building, Wrench, Eye, ClipboardList, Car, HardHat, FileText, Settings, Gavel, User } from "lucide-react"
 
-export default function AuthSetupPage() {
+function AuthSetupContent() {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     fullName: "",
@@ -236,5 +236,20 @@ export default function AuthSetupPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function AuthSetupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading setup...</p>
+        </div>
+      </div>
+    }>
+      <AuthSetupContent />
+    </Suspense>
   )
 }
