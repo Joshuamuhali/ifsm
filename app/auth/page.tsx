@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/lib/supabase-client"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,6 +34,18 @@ interface SignUpData {
 }
 
 export default function AuthPage() {
+  // Check if Supabase is configured (for build-time rendering)
+  if (!isSupabaseConfigured()) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Authentication System</h1>
+          <p className="text-gray-600">Please configure environment variables to enable authentication.</p>
+        </div>
+      </div>
+    )
+  }
+
   const [loginData, setLoginData] = useState<LoginData>({
     email: "",
     password: "",
