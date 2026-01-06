@@ -92,7 +92,7 @@ export default function MechanicDashboard() {
         .order('reported_at', { ascending: false })
         .limit(50)
 
-      const processedFailures = failuresData?.map(failure => ({
+      const processedFailures = failuresData?.map((failure: any) => ({
         id: failure.id,
         vehicle_id: failure.vehicle_id,
         vehicle_name: failure.vehicles?.name || 'Unknown Vehicle',
@@ -124,7 +124,7 @@ export default function MechanicDashboard() {
         .order('scheduled_date', { ascending: true })
         .limit(20)
 
-      const processedSchedules = schedulesData?.map(schedule => ({
+      const processedSchedules = schedulesData?.map((schedule: any) => ({
         id: schedule.id,
         vehicle_id: schedule.vehicle_id,
         vehicle_name: schedule.vehicles?.name || 'Unknown Vehicle',
@@ -141,14 +141,14 @@ export default function MechanicDashboard() {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
       setStats({
-        vehiclesAssigned: new Set(processedFailures.map(f => f.vehicle_id)).size,
-        criticalFailuresToday: processedFailures.filter(f => 
+        vehiclesAssigned: new Set(processedFailures.map((f: any) => f.vehicle_id)).size,
+        criticalFailuresToday: processedFailures.filter((f: any) => 
           f.severity === 'critical' && f.reported_at.split('T')[0] === today
         ).length,
-        criticalFailuresWeek: processedFailures.filter(f => 
+        criticalFailuresWeek: processedFailures.filter((f: any) => 
           f.severity === 'critical' && f.reported_at >= weekAgo
         ).length,
-        upcomingMaintenance: processedSchedules.filter(s => s.status === 'scheduled').length
+        upcomingMaintenance: processedSchedules.filter((s: any) => s.status === 'scheduled').length
       })
 
     } catch (error) {
