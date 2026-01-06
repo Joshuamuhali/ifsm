@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { 
   Wrench, AlertTriangle, CheckCircle, Clock, Calendar, Filter, 
-  Search, Tool, Car, Settings, Activity, TrendingUp, FileText
+  Search, Wrench as Tool, Car, Settings, Activity, TrendingUp, FileText
 } from "lucide-react"
 
 interface VehicleFailure {
