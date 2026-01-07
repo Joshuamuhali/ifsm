@@ -587,7 +587,7 @@ export default function AuthPage() {
                   <form onSubmit={handleLogin} className="space-y-5">
                     {/* Google Sign-In - Primary Option */}
                     <div className="space-y-4">
-                      <GoogleSignInButton 
+                      {/* <GoogleSignInButton 
                         onSuccess={() => {
                           toast({
                             title: "Google Sign-In",
@@ -601,7 +601,7 @@ export default function AuthPage() {
                             variant: "destructive",
                           })
                         }}
-                      />
+                      /> */}
                       
                       <div className="relative">
                         <span className="w-full border-t border-gray-200"></span>
