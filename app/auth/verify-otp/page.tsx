@@ -2,6 +2,8 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ROLE_DASHBOARD_ROUTES } from '@/lib/constants/roles';
+import { getSupabaseClient } from '@/lib/supabase-client';
 
 // Ensure this page is fully dynamic (no prerendering)
 export const dynamic = 'force-dynamic';
@@ -30,7 +32,25 @@ function VerifyOTPContent() {
       const data = await response.json();
 
       if (response.ok) {
-        router.push('/dashboard');
+        // After successful OTP verification, get user role and redirect appropriately
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Get user profile to determine role
+          const { data: profile } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          // Redirect to role-specific dashboard
+          const dashboardRoute = ROLE_DASHBOARD_ROUTES[profile?.role as keyof typeof ROLE_DASHBOARD_ROUTES];
+          const redirectUrl = dashboardRoute || '/dashboard/driver'; // fallback to driver
+          router.push(redirectUrl);
+        } else {
+          router.push('/dashboard/driver'); // fallback
+        }
       } else {
         setError(data.error || 'Invalid OTP');
       }

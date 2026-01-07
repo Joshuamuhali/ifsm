@@ -254,7 +254,17 @@ export default function AuthPage() {
               title: "Login Successful!",
               description: "OTP verified successfully.",
             })
-            router.push('/dashboard')
+            
+            // Get user role and redirect to appropriate dashboard
+            const { data: profile } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', authData.user.id)
+              .maybeSingle();
+            
+            const dashboardRoute = ROLE_DASHBOARD_ROUTES[profile?.role as keyof typeof ROLE_DASHBOARD_ROUTES];
+            const redirectUrl = dashboardRoute || '/dashboard/driver'; // fallback to driver
+            router.push(redirectUrl)
             return
           }
 
