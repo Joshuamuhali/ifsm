@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { Button } from '@/components/ui/button'
@@ -58,6 +58,7 @@ function DriverTestPage() {
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
   const [startTime] = useState(Date.now())
   const [currentStep, setCurrentStep] = useState(0)
   const router = useRouter()
@@ -66,11 +67,6 @@ function DriverTestPage() {
   const supabase = getSupabaseClient()
 
   const testType = searchParams.get('type') || 'pre-trip'
-
-  useEffect(() => {
-    checkAuth()
-    loadTestModule()
-  }, [testType])
 
   const checkAuth = async () => {
     try {
@@ -88,7 +84,7 @@ function DriverTestPage() {
     }
   }
 
-  const loadTestModule = async () => {
+  const loadTestModule = useCallback(async () => {
     try {
       // Comprehensive Pre-Trip Checklist organized into specific modules
       const mockTestModules: Record<string, TestModule> = {
@@ -706,7 +702,12 @@ function DriverTestPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [testType]) // Add testType dependency here instead of in useEffect
+
+  useEffect(() => {
+    checkAuth()
+    loadTestModule()
+  }, [loadTestModule])
 
   const handleAnswerChange = (questionId: string, answer: any) => {
     setAnswers(prev => ({
@@ -794,7 +795,17 @@ function DriverTestPage() {
   }
 
   const handleSubmitTest = async () => {
-    if (!testModule || !user) return
+    console.log('Submit test button clicked')
+    
+    if (isSubmitted) {
+      console.log('Test already submitted')
+      return
+    }
+    
+    if (!testModule || !user) {
+      console.error('Missing test module or user')
+      return
+    }
 
     if (!validateAnswers()) {
       toast({
@@ -816,6 +827,8 @@ function DriverTestPage() {
       return
     }
 
+    console.log('Starting test submission...')
+    setIsSubmitted(true)
     setSubmitting(true)
     try {
       const risk = calculateRiskScore()
@@ -843,23 +856,33 @@ function DriverTestPage() {
         completed_at: new Date().toISOString()
       }
 
-      // Store test data in localStorage for the results page
-      localStorage.setItem('currentTestResults', JSON.stringify(testData))
+      console.log('Test data prepared:', testData)
+
+      // Save directly to Supabase database
+      const { error: saveError } = await supabase
+        .from('tests')
+        .insert(testData)
+
+      if (saveError) {
+        console.error('Error saving test to database:', saveError)
+        throw saveError
+      }
+
+      console.log('Test successfully saved to database')
 
       toast({
         title: 'Test Completed!',
-        description: 'Redirecting to results page...',
+        description: 'Test results have been saved. Redirecting to results page...',
       })
 
-      // Redirect to results page instead of saving directly
-      setTimeout(() => {
-        router.push(`/dashboard/driver/test/results?type=${encodeURIComponent(testModule.name)}`)
-      }, 1000)
+      console.log('Redirecting to results page...')
+      // Redirect to results page with the test ID
+      router.push(`/dashboard/driver/test/results?type=${encodeURIComponent(testModule.name)}`)
     } catch (error) {
       console.error('Error submitting test:', error)
       toast({
         title: 'Error',
-        description: 'Failed to process test results',
+        description: 'Failed to save test results. Please try again.',
         variant: 'destructive'
       })
     } finally {

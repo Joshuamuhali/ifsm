@@ -77,10 +77,7 @@ export default function DriverDashboard() {
       // Fetch user profile
       const { data: profile, error: profileError } = await supabase
         .from('users')
-        .select(`
-          *,
-          profiles:full_name
-        `)
+        .select('*')
         .eq('id', session.user.id)
         .single()
 

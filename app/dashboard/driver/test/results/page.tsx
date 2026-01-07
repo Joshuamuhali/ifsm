@@ -62,7 +62,7 @@ export default function TestResultsPage() {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // Get test data from URL params or localStorage
+  // Get test data from URL params or database
   useEffect(() => {
     const testId = searchParams.get('testId')
     const testType = searchParams.get('type')
@@ -71,8 +71,8 @@ export default function TestResultsPage() {
       // Load existing test from database
       loadTestFromDatabase(testId)
     } else if (testType) {
-      // Load test data from localStorage (just submitted)
-      loadTestFromLocalStorage()
+      // Load most recent test of this type from database
+      loadMostRecentTest(testType)
     } else {
       toast({
         title: 'Error',
@@ -82,6 +82,32 @@ export default function TestResultsPage() {
       router.push('/dashboard/driver')
     }
   }, [])
+
+  const loadMostRecentTest = async (testType: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('tests')
+        .select('*')
+        .eq('test_type', testType)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error) throw error
+      
+      setTestData(data)
+      calculateScoreBreakdown(data)
+    } catch (error) {
+      console.error('Error loading most recent test:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load test results',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const loadTestFromDatabase = async (testId: string) => {
     try {
@@ -107,21 +133,6 @@ export default function TestResultsPage() {
     }
   }
 
-  const loadTestFromLocalStorage = () => {
-    try {
-      const storedData = localStorage.getItem('currentTestResults')
-      if (storedData) {
-        const data = JSON.parse(storedData)
-        setTestData(data)
-        calculateScoreBreakdown(data)
-      }
-    } catch (error) {
-      console.error('Error loading test from localStorage:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const calculateScoreBreakdown = (test: TestResult) => {
     const sectionScores: ScoreBreakdown['sectionScores'] = {}
     let totalScore = 0
@@ -132,7 +143,7 @@ export default function TestResultsPage() {
       let sectionMax = 0
       let criticalIssues = 0
 
-      section.questions.forEach(q => {
+      section.questions.forEach((q: any) => {
         const answer = test.answers[q.id]
         if (answer) {
           if (q.critical && answer.value === 0) criticalIssues++
@@ -193,9 +204,6 @@ export default function TestResultsPage() {
         title: 'Test Saved!',
         description: 'Test results have been saved to the database.',
       })
-
-      // Clear localStorage
-      localStorage.removeItem('currentTestResults')
     } catch (error) {
       console.error('Error saving test:', error)
       toast({
