@@ -834,7 +834,8 @@ function DriverTestPage() {
             id: q.id,
             question: q.question,
             answer: answers[q.id],
-            critical: q.critical
+            critical: q.critical,
+            points: q.points || 10
           }))
         })),
         completion_time_ms: completionTime,
@@ -842,33 +843,23 @@ function DriverTestPage() {
         completed_at: new Date().toISOString()
       }
 
-      const { error: saveError } = await supabase
-        .from('tests')
-        .insert(testData)
-
-      if (saveError) {
-        console.error('Error saving test:', saveError)
-        toast({
-          title: 'Error',
-          description: 'Failed to save test results',
-          variant: 'destructive'
-        })
-        return
-      }
+      // Store test data in localStorage for the results page
+      localStorage.setItem('currentTestResults', JSON.stringify(testData))
 
       toast({
-        title: 'Test Submitted!',
-        description: `Risk score: ${risk.totalScore}/210 (${risk.riskLevel}). Dispatch: ${risk.dispatchStatus}.`
+        title: 'Test Completed!',
+        description: 'Redirecting to results page...',
       })
 
+      // Redirect to results page instead of saving directly
       setTimeout(() => {
-        router.push('/dashboard/driver')
-      }, 1500)
+        router.push(`/dashboard/driver/test/results?type=${encodeURIComponent(testModule.name)}`)
+      }, 1000)
     } catch (error) {
       console.error('Error submitting test:', error)
       toast({
         title: 'Error',
-        description: 'Failed to submit test',
+        description: 'Failed to process test results',
         variant: 'destructive'
       })
     } finally {
