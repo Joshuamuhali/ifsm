@@ -1,39 +1,26 @@
 import { createBrowserClient } from "@supabase/ssr"
+import { getSupabaseConfig } from "./env-validation"
 
 let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
 
-function validateSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!url || !key) {
-    return {
-      isValid: false,
-      error: "Supabase configuration is missing. Please add environment variables.",
-    }
-  }
-
-  return { isValid: true, error: null }
-}
-
 export function getSupabaseClient() {
   if (!supabaseClient) {
-    const config = validateSupabaseConfig()
-    if (!config.isValid) {
-      throw new Error(config.error)
-    }
-
+    const config = getSupabaseConfig()
     supabaseClient = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      config.url,
+      config.anonKey,
     )
   }
   return supabaseClient
 }
 
 export function isSupabaseConfigured(): boolean {
-  const config = validateSupabaseConfig()
-  return config.isValid
+  try {
+    getSupabaseConfig()
+    return true
+  } catch {
+    return false
+  }
 }
 
 export type SupabaseClient = ReturnType<typeof createBrowserClient>

@@ -1,5 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 
 // Complete server-side signup that bypasses Supabase email confirmation
@@ -11,10 +12,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Create Supabase client with service role
-    const supabase = createClient(
+    // Create Supabase server client with proper cookie handling
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => 
+              cookieStore.set(name, value, options)
+            )
+          },
+        },
+      },
     )
 
     // Hash password
@@ -69,31 +83,10 @@ export async function POST(request: NextRequest) {
       // Don't fail the operation
     }
 
-    // Create session manually
-    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-      access_token: 'manual-session', // This would need proper token generation
-      refresh_token: 'manual-refresh',
-      user: {
-        id: authUser.id,
-        email: email,
-        aud: 'authenticated',
-        role: 'authenticated',
-        app_metadata: {
-          full_name: fullName,
-          provider: 'email'
-        },
-        user_metadata: {
-          full_name: fullName,
-          email: email,
-          email_verified: true
-        }
-      }
-    })
-
     return NextResponse.json({ 
       success: true, 
       user: userData,
-      message: 'Account created successfully'
+      message: 'Account created successfully. Please check your email to verify your account.'
     })
 
   } catch (error) {

@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr"
+import { getSupabaseConfig } from "./env-validation"
 
 // Cache the client to avoid recreating it on every call
 let cachedClient: ReturnType<typeof createServerClient> | null = null
@@ -9,13 +10,16 @@ export async function createSupabaseServerClient() {
     return cachedClient
   }
 
+  // Get validated config
+  const config = getSupabaseConfig()
+  
   // Dynamic import to avoid client-side bundling issues
   const { cookies } = await import("next/headers")
   const cookieStore = await cookies()
   
   cachedClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    config.url,
+    config.serviceKey || config.anonKey,
     {
       cookies: {
         getAll() {

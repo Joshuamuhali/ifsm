@@ -2,21 +2,23 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase-client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PasswordInput } from "@/components/ui/password-input"
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { getSupabaseClient } from '@/lib/supabase-client'
+import { isSupabaseConfigured } from '@/lib/supabase-client'
+import { ROLE_DASHBOARD_ROUTES } from '@/lib/constants/roles'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PasswordInput } from '@/components/ui/password-input'
+import { useToast } from '@/components/ui/use-toast'
+import { setSignupContext, getSignupContext, clearSignupContext } from '@/lib/server-auth'
+import { ROLES, ROLE_DISPLAY_NAMES, SIGNUP_ROLES } from '@/lib/role-definitions'
+import { Truck, Users, Shield, Building, Wrench, Eye, EyeOff, ClipboardList, Car, HardHat, FileText, Settings, Gavel, User, Mail, Lock, UserPlus, BarChart3 } from 'lucide-react'
 import { PasswordStrengthMeter } from "@/components/password-strength-meter"
-import { ROLES, ROLE_DISPLAY_NAMES, SIGNUP_ROLES, ROLE_DASHBOARD_ROUTES } from "@/lib/constants/roles"
-import { useToast } from "@/components/ui/use-toast"
-import { Truck, Shield, Users, BarChart3, Mail, Lock, User, Building, Wrench, Eye, EyeOff, ClipboardList, Car, HardHat, FileText, Settings, Gavel } from "lucide-react"
-import { GoogleSignInButton } from "@/components/auth/google-signin-button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface LoginData {
   email: string
@@ -88,10 +90,12 @@ export default function AuthPage() {
 
   // Handle URL error parameters
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const error = urlParams.get('error')
-    const message = urlParams.get('message')
-    const verified = urlParams.get('verified')
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const error = urlParams.get('error')
+      const message = urlParams.get('message')
+      const verified = urlParams.get('verified')
 
     if (error) {
       switch (error) {
@@ -113,7 +117,7 @@ export default function AuthPage() {
           break
       }
       // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname)
+      router.push(window.location.pathname)
     }
 
     if (verified) {
@@ -122,7 +126,7 @@ export default function AuthPage() {
         description: "Your email has been successfully confirmed.",
       })
       // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname)
+      router.push(window.location.pathname)
     }
 
     if (urlParams.get('signup') === 'success') {
@@ -131,7 +135,7 @@ export default function AuthPage() {
         description: "Your account has been successfully created.",
       })
       // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname)
+      router.push(window.location.pathname)
     }
   }, [toast])
 
@@ -450,8 +454,7 @@ export default function AuthPage() {
           setErrors({})
           
           // Clean up stored data
-          localStorage.removeItem('signup_email')
-          localStorage.removeItem('signup_role')
+          await clearSignupContext()
 
           // Use router.replace to prevent going back to OTP page
           router.replace(dashboardRoute)
@@ -482,7 +485,7 @@ export default function AuthPage() {
           data: {
             full_name: signUpData.fullName,
           },
-          emailRedirectTo: `${window.location.origin}/auth/verify-otp`,
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/verify-otp` : '/auth/verify-otp',
         }
       })
 
@@ -498,8 +501,7 @@ export default function AuthPage() {
       }
 
       // 2️⃣ Temporarily store signup context (OTP step needs this)
-      localStorage.setItem('signup_email', signUpData.email)
-      localStorage.setItem('signup_role', signUpData.role)
+      await setSignupContext(signUpData.email, signUpData.role)
 
       // 3️⃣ Create user profile (idempotent)
       const response = await fetch('/api/create-user', {
