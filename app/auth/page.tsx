@@ -259,7 +259,7 @@ export default function AuthPage() {
             const { data: profile } = await supabase
               .from('users')
               .select('role')
-              .eq('id', authData.user.id)
+              .eq('id', verifyData.user.id)
               .maybeSingle();
             
             const dashboardRoute = ROLE_DASHBOARD_ROUTES[profile?.role as keyof typeof ROLE_DASHBOARD_ROUTES];
