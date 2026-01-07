@@ -137,6 +137,7 @@ export default function AuthPage() {
       // Clear URL parameters
       router.push(window.location.pathname)
     }
+    }
   }, [toast])
 
   const validateEmail = (email: string) => {
