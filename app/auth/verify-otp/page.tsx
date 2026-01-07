@@ -1,11 +1,12 @@
-'use client';
+'use client'; // MUST be first
 
-export const dynamic = 'force-dynamic'; // Prevent prerendering
-
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function VerifyOTPPage() {
+// Ensure this page is fully dynamic (no prerendering)
+export const dynamic = 'force-dynamic';
+
+function VerifyOTPContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || ''; // fallback to empty string
@@ -45,7 +46,7 @@ export default function VerifyOTPPage() {
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
         <h2 className="text-2xl font-bold text-center">Verify OTP</h2>
         <p className="text-center text-gray-600">
-          Enter the code sent to <span className="font-medium">{email}</span>
+          Enter code sent to <span className="font-medium">{email}</span>
         </p>
         
         <form onSubmit={handleVerifyOTP} className="space-y-4">
@@ -72,5 +73,13 @@ export default function VerifyOTPPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }

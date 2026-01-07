@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -52,7 +52,7 @@ interface ScoreBreakdown {
   }
 }
 
-export default function TestResultsPage() {
+function TestResultsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -471,5 +471,13 @@ COMPLETION TIME: ${Math.round((testData?.completion_time_ms || 0) / 1000)} secon
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function TestResultsPage() {
+  return (
+    <Suspense fallback={<AppPageLoader />}>
+      <TestResultsContent />
+    </Suspense>
   )
 }
