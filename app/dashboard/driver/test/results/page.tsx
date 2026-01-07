@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { AppPageLoader } from '@/components/ui/app-loader'
 import { 
   CheckCircle, 
   XCircle, 
@@ -302,14 +303,7 @@ COMPLETION TIME: ${Math.round((testData?.completion_time_ms || 0) / 1000)} secon
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading test results...</p>
-        </div>
-      </div>
-    )
+    return <AppPageLoader label="Loading test results..." />
   }
 
   if (!testData || !scoreBreakdown) {

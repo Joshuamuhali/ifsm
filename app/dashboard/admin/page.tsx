@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Building, Users, Truck, AlertTriangle, TrendingUp, Shield } from "lucide-react"
 import { getSupabaseClient } from "@/lib/supabase-client"
+import { AppPageLoader } from '@/components/ui/app-loader'
 
 interface Organization {
   id: string
@@ -23,6 +24,12 @@ interface User {
   created_at: string
 }
 
+type UserRow = User & {
+  profiles?: {
+    full_name?: string | null
+  } | null
+}
+
 interface Trip {
   id: string
   status: string
@@ -35,7 +42,7 @@ interface Trip {
 
 export default function SuperAdminDashboard() {
   const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<UserRow[]>([])
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = getSupabaseClient()
@@ -73,7 +80,7 @@ export default function SuperAdminDashboard() {
 
       // Process organizations data
       const orgMap = new Map<string, Organization>()
-      allUsers?.forEach(user => {
+      ;(allUsers as UserRow[] | null)?.forEach((user: UserRow) => {
         if (user.org_id) {
           const existing = orgMap.get(user.org_id) || {
             id: user.org_id,
@@ -85,7 +92,7 @@ export default function SuperAdminDashboard() {
         }
       })
 
-      allTrips?.forEach(trip => {
+      ;(allTrips as Trip[] | null)?.forEach((trip: Trip) => {
         if (trip.org_id) {
           const existing = orgMap.get(trip.org_id) || {
             id: trip.org_id,
@@ -97,8 +104,8 @@ export default function SuperAdminDashboard() {
         }
       })
 
-      setUsers(allUsers || [])
-      setTrips(allTrips || [])
+      setUsers((allUsers as UserRow[] | null) || [])
+      setTrips((allTrips as Trip[] | null) || [])
       setOrganizations(Array.from(orgMap.values()))
     } catch (error) {
       console.error('Error:', error)
@@ -117,14 +124,7 @@ export default function SuperAdminDashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading global data...</p>
-        </div>
-      </div>
-    )
+    return <AppPageLoader label="Loading global data..." />
   }
 
   return (

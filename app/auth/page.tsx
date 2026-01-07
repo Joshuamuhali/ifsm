@@ -14,7 +14,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PasswordInput } from '@/components/ui/password-input'
 import { useToast } from '@/components/ui/use-toast'
-import { setSignupContext, getSignupContext, clearSignupContext } from '@/lib/server-auth'
 import { ROLES, ROLE_DISPLAY_NAMES, SIGNUP_ROLES } from '@/lib/role-definitions'
 import { Truck, Users, Shield, Building, Wrench, Eye, EyeOff, ClipboardList, Car, HardHat, FileText, Settings, Gavel, User, Mail, Lock, UserPlus, BarChart3 } from 'lucide-react'
 import { PasswordStrengthMeter } from "@/components/password-strength-meter"
@@ -71,6 +70,25 @@ export default function AuthPage() {
   const supabase = getSupabaseClient()
   const { toast } = useToast()
 
+  const setSignupContext = async (email: string, role: string) => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('signup_email', email)
+    window.localStorage.setItem('signup_role', role)
+  }
+
+  const getSignupContext = async () => {
+    if (typeof window === 'undefined') return { email: null as string | null, role: null as string | null }
+    const email = window.localStorage.getItem('signup_email')
+    const role = window.localStorage.getItem('signup_role')
+    return { email, role }
+  }
+
+  const clearSignupContext = async () => {
+    if (typeof window === 'undefined') return
+    window.localStorage.removeItem('signup_email')
+    window.localStorage.removeItem('signup_role')
+  }
+
   // Helper function to get role icon
   const getRoleIcon = (role: string) => {
     const iconMap: Record<string, React.ReactNode> = {
@@ -90,56 +108,52 @@ export default function AuthPage() {
 
   // Handle URL error parameters
   useEffect(() => {
-    // Only run on client side
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      const error = urlParams.get('error')
-      const message = urlParams.get('message')
-      const verified = urlParams.get('verified')
+    if (typeof window === 'undefined') return
 
-      if (error) {
-        switch (error) {
-          case 'email_link_expired':
-            setErrors({ login: 'Email confirmation link has expired. Please request a new one.' })
-            toast({
-              title: "Link Expired",
-              description: "Your email confirmation link has expired. Please sign up again.",
-              variant: "destructive"
-            })
-            break
-          case 'auth_failed':
-            setErrors({ login: message || 'Authentication failed. Please try again.' })
-            toast({
-              title: "Authentication Failed",
-              description: message || 'Please check your credentials and try again.',
-              variant: "destructive"
-            })
-            break
-        }
-        // Clear URL parameters
-        router.push(window.location.pathname)
+    const urlParams = new URLSearchParams(window.location.search)
+    const error = urlParams.get('error')
+    const message = urlParams.get('message')
+    const verified = urlParams.get('verified')
+
+    if (error) {
+      switch (error) {
+        case 'email_link_expired':
+          setErrors({ login: 'Email confirmation link has expired. Please request a new one.' })
+          toast({
+            title: 'Link Expired',
+            description: 'Your email confirmation link has expired. Please sign up again.',
+            variant: 'destructive',
+          })
+          break
+        case 'auth_failed':
+          setErrors({ login: message || 'Authentication failed. Please try again.' })
+          toast({
+            title: 'Authentication Failed',
+            description: message || 'Please check your credentials and try again.',
+            variant: 'destructive',
+          })
+          break
       }
 
-      if (verified) {
-        toast({
-          title: "Email Verified!",
-          description: "Your email has been successfully confirmed.",
-        })
-        // Clear URL parameters
-        router.push(window.location.pathname)
-      }
-
-      if (urlParams.get('signup') === 'success') {
-        toast({
-          title: "Account Created!",
-          description: "Your account has been successfully created.",
-        })
-        // Clear URL parameters
-        router.push(window.location.pathname)
-      }
+      router.push(window.location.pathname)
     }
-  }
-  }, [toast])
+
+    if (verified) {
+      toast({
+        title: 'Email Verified!',
+        description: 'Your email has been successfully confirmed.',
+      })
+      router.push(window.location.pathname)
+    }
+
+    if (urlParams.get('signup') === 'success') {
+      toast({
+        title: 'Account Created!',
+        description: 'Your account has been successfully created.',
+      })
+      router.push(window.location.pathname)
+    }
+  }, [toast, router]);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -284,7 +298,7 @@ export default function AuthPage() {
           .from('users')
           .select('role, org_id, is_verified')
           .eq('id', authData.user.id)
-          .single()
+          .maybeSingle()
 
         console.log('Profile fetch result:', { profile, profileError })
         

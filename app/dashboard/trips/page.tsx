@@ -3,8 +3,17 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Truck, AlertTriangle, CheckCircle, Clock } from "lucide-react"
+import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/use-toast'
+import { AppPageLoader } from '@/components/ui/app-loader'
 import { getSupabaseClient } from "@/lib/supabase-client"
+import { 
+  Truck,
+  MapPin,
+  AlertTriangle, 
+  CheckCircle, 
+  Clock 
+} from "lucide-react"
 
 interface Trip {
   id: string
@@ -67,14 +76,7 @@ export default function DriverTripsDashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your trips...</p>
-        </div>
-      </div>
-    )
+    return <AppPageLoader label="Loading your trips..." />
   }
 
   return (

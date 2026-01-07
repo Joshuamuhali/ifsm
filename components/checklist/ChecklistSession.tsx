@@ -572,10 +572,7 @@ export default function ChecklistSession({ driverId, orgId, onComplete, onSaveDr
               className="bg-green-600 hover:bg-green-700"
             >
               {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Submitting...
-                </>
+                <AppInlineLoader label="Submitting..." className="text-white" />
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />

@@ -29,12 +29,12 @@ export async function POST(request: NextRequest) {
       },
     )
 
-    // Check if user already exists
+    // Check if user already exists by ID or email
     const { data: existingUser } = await supabase
       .from('users')
       .select('id, email, role, is_verified')
-      .eq('id', userId)
-      .single()
+      .or(`id.eq.${userId},email.eq.${email}`)
+      .maybeSingle()
 
     if (existingUser) {
       // User already exists, return success
@@ -61,7 +61,24 @@ export async function POST(request: NextRequest) {
     if (userError) {
       console.error('User creation error:', userError)
       
-      // Return appropriate status code based on error type
+      // Handle duplicate key error gracefully - user already exists
+      if (userError.code === '23505') {
+        // Try to fetch the existing user and return success
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id, email, role, is_verified')
+          .eq('id', userId)
+          .maybeSingle()
+          
+        if (existingUser) {
+          return NextResponse.json({ 
+            success: true, 
+            user: existingUser,
+            message: 'User profile already exists'
+          })
+        }
+      }
+      
       let status = 500
       if (userError.message?.includes('duplicate key') || userError.code === '23505') {
         status = 409 // Conflict for duplicate entries
@@ -75,7 +92,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('user_id, full_name')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (!existingProfile) {
       // Create additional profile data only if it doesn't exist

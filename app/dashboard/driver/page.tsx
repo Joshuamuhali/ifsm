@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -81,8 +82,16 @@ export default function DriverDashboard() {
         .eq('id', session.user.id)
         .single()
 
-      if (profileError) {
-        console.error('Profile fetch error:', profileError)
+      const profileErrorObj = profileError as unknown as Record<string, unknown> | null
+      const profileErrorHasMessage = !!profileErrorObj && typeof profileErrorObj.message === 'string' && profileErrorObj.message.length > 0
+      const profileErrorHasCode = !!profileErrorObj && typeof profileErrorObj.code === 'string' && profileErrorObj.code.length > 0
+      const profileErrorHasMeaningfulInfo = profileErrorHasMessage || profileErrorHasCode
+      const isEmptyProfileError = !!profileErrorObj && !profileErrorHasMeaningfulInfo && Object.keys(profileErrorObj).length === 0
+
+      if ((profileError && !isEmptyProfileError) || !profile) {
+        if (profileError && !isEmptyProfileError) {
+          console.error('Profile fetch error:', profileError)
+        }
         
         // Handle RLS recursion error (42P17) by using API fallback
         if (profileError?.code === '42P17') {
@@ -141,17 +150,29 @@ export default function DriverDashboard() {
         setUserProfile(profile)
       }
 
-      // Fetch user-specific tests
-      const { data: userTests, error: testsError } = await supabase
-        .from('tests')
+      // Fetch user-specific test history (new schema). Fallback to test_results if history isn't available.
+      const { data: historyRows, error: historyError } = await supabase
+        .from('test_history')
         .select('*')
         .eq('driver_id', session.user.id)
-        .order('created_at', { ascending: false })
+        .order('completed_at', { ascending: false })
 
-      if (testsError) {
-        console.error('Tests fetch error:', testsError)
+      if (!historyError) {
+        setTests(historyRows || [])
       } else {
-        setTests(userTests || [])
+        console.error('Test history fetch error:', historyError)
+
+        const { data: resultRows, error: resultsError } = await supabase
+          .from('test_results')
+          .select('*')
+          .eq('driver_id', session.user.id)
+          .order('completed_at', { ascending: false })
+
+        if (resultsError) {
+          console.error('Test results fetch error:', resultsError)
+        } else {
+          setTests(resultRows || [])
+        }
       }
 
     } catch (error) {
@@ -191,16 +212,53 @@ export default function DriverDashboard() {
     }
   }
 
+  const totalTests = tests.length
+  const completedTests = tests.filter(t => t.status === 'completed').length
+  const failedTests = tests.filter(t => t.status === 'failed').length
+  const pendingTests = tests.filter(t => t.status === 'pending' || t.status === 'in_progress').length
+  const gradedTests = completedTests + failedTests
+  const successRate = gradedTests > 0 ? Math.round((completedTests / gradedTests) * 100) : 0
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-green-500/20 border-t-green-600 rounded-full animate-spin"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-green-400 rounded-full animate-spin animation-delay-150"></div>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <div className="bg-green-600 rounded-lg p-2">
+                  <Truck className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">IFSM Driver Portal</h1>
+                  <p className="text-xs text-gray-500">Fleet Safety Management</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Skeleton className="h-9 w-28 rounded-md" />
+                <div className="h-8 w-px bg-gray-300"></div>
+                <Skeleton className="h-9 w-20 rounded-md" />
+              </div>
+            </div>
           </div>
-          <p className="mt-6 text-gray-600 font-medium">Loading your dashboard...</p>
-        </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Skeleton className="h-28 w-full rounded-xl" />
+            <Skeleton className="h-28 w-full rounded-xl" />
+            <Skeleton className="h-28 w-full rounded-xl" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-80 w-full rounded-xl" />
+            <Skeleton className="h-80 w-full rounded-xl" />
+          </div>
+        </main>
       </div>
     )
   }
@@ -266,7 +324,7 @@ export default function DriverDashboard() {
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-white/30">
                   <div className="text-center">
                     <div className="text-4xl font-bold text-white mb-1">
-                      {tests.filter(t => t.status === 'completed').length}
+                      {completedTests}
                     </div>
                     <div className="text-sm text-green-100">Tests Completed</div>
                   </div>
@@ -312,7 +370,7 @@ export default function DriverDashboard() {
                   <div className="bg-green-100 rounded-lg p-3">
                     <FileText className="h-6 w-6 text-green-600" />
                   </div>
-                  <span className="text-2xl font-bold text-gray-900">{tests.length}</span>
+                  <span className="text-2xl font-bold text-gray-900">{totalTests}</span>
                 </div>
                 <h3 className="text-gray-900 font-semibold mb-1">Total Tests</h3>
                 <p className="text-gray-500 text-sm">All time assessments</p>
@@ -324,7 +382,7 @@ export default function DriverDashboard() {
                     <CheckCircle className="h-6 w-6 text-green-600" />
                   </div>
                   <span className="text-2xl font-bold text-gray-900">
-                    {tests.filter(t => t.status === 'completed').length}
+                    {completedTests}
                   </span>
                 </div>
                 <h3 className="text-gray-900 font-semibold mb-1">Completed</h3>
@@ -337,7 +395,7 @@ export default function DriverDashboard() {
                     <Clock className="h-6 w-6 text-yellow-600" />
                   </div>
                   <span className="text-2xl font-bold text-gray-900">
-                    {tests.filter(t => t.status === 'pending').length}
+                    {pendingTests}
                   </span>
                 </div>
                 <h3 className="text-gray-900 font-semibold mb-1">Pending</h3>
@@ -350,9 +408,7 @@ export default function DriverDashboard() {
                     <TrendingUp className="h-6 w-6 text-emerald-600" />
                   </div>
                   <span className="text-2xl font-bold text-gray-900">
-                    {tests.length > 0 
-                      ? Math.round((tests.filter(t => t.status === 'completed').length / tests.length) * 100)
-                      : 0}%
+                    {successRate}%
                   </span>
                 </div>
                 <h3 className="text-gray-900 font-semibold mb-1">Success Rate</h3>

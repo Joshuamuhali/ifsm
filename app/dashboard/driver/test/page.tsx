@@ -7,6 +7,7 @@ import { testSessionManager, TestSession } from '@/lib/test-session-manager'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
+import { AppPageLoader } from '@/components/ui/app-loader'
 import { 
   Truck, 
   Clock, 
@@ -1058,14 +1059,7 @@ function DriverTestPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading test...</p>
-        </div>
-      </div>
-    )
+    return <AppPageLoader label="Loading test..." spinnerClassName="text-green-600" />
   }
 
   if (!testModule) {
