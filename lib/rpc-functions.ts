@@ -247,11 +247,11 @@ export async function checkCriticalFailureOverride(tripId: string) {
     if (failuresError) throw failuresError
 
     // Calculate total critical points
-    const totalCriticalPoints = criticalFailures?.reduce((sum, failure) => sum + (failure.points || 0), 0) || 0
+    const totalCriticalPoints = criticalFailures?.reduce((sum: number, failure: any) => sum + (failure.points || 0), 0) || 0
 
     // Determine if override is needed
-    const needsOverride = totalCriticalPoints >= 5 || criticalFailures?.some(f => f.points >= 5)
-    const hasHighImpactFailure = criticalFailures?.some(f => f.points >= 10)
+    const needsOverride = totalCriticalPoints >= 5 || criticalFailures?.some((f: any) => f.points >= 5)
+    const hasHighImpactFailure = criticalFailures?.some((f: any) => f.points >= 10)
 
     return {
       success: true,
@@ -266,7 +266,7 @@ export async function checkCriticalFailureOverride(tripId: string) {
         canApprove: !needsOverride && trip?.status === "submitted",
         recommendations: {
           requiresSupervisorApproval: needsOverride,
-          requiresMechanicReview: criticalFailures?.some(f => 
+          requiresMechanicReview: criticalFailures?.some((f: any) => 
             f.module_items?.label?.toLowerCase().includes("vehicle") ||
             f.module_items?.label?.toLowerCase().includes("mechanical")
           ),

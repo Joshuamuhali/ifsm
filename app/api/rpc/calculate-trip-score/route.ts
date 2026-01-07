@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getCurrentUserServer } from "@/lib/auth-helpers"
+import { getCurrentUserServer, getUserRole } from "@/lib/auth-helpers"
 import { handleError, checkPermission } from "@/lib/api-helpers"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { calculateTripScore } from "@/lib/rpc-functions"
@@ -30,7 +30,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Check permissions - users can calculate scores for trips they can access
-    const { hasPermission } = await checkPermission(user.id, "trip", "view")
+    const userRole = await getUserRole(user.id)
+    if (!userRole) {
+      return NextResponse.json({ 
+        success: false, 
+        error: "User role not found" 
+      }, { status: 403 })
+    }
+    
+    const hasPermission = await checkPermission(user.id, userRole, "trip", "view")
     if (!hasPermission) {
       return NextResponse.json({ 
         success: false, 

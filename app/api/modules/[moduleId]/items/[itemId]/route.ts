@@ -109,7 +109,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     const supabase = await getSupabaseServer()
-    const body = await req.body
+    const body = await req.json()
 
     // Get current user's role
     const { data: currentUser } = await supabase
@@ -164,6 +164,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     // Update module item
+    if (!body) {
+      return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 })
+    }
+
     const { data: updatedItem, error } = await supabase
       .from("module_items")
       .update({

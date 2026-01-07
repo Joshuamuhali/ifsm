@@ -116,7 +116,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     const supabase = await getSupabaseServer()
-    const body = await req.json
+    const body = await req.json()
 
     // Get current user's role
     const { data: currentUser } = await supabase

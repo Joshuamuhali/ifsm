@@ -49,7 +49,7 @@ export async function calculateDriverRiskScore(userId: string) {
 
   if (!trips || trips.length === 0) return 0
 
-  const totalScore = trips.reduce((sum, trip) => {
+  const totalScore = trips.reduce((sum: number, trip: any) => {
     const penaltyMultiplier = trip.critical_override ? 1.5 : 1
     return sum + (100 - trip.aggregate_score) * penaltyMultiplier
   }, 0)

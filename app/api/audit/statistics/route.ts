@@ -94,14 +94,14 @@ export async function GET(req: NextRequest) {
 
     // Count by action
     const actionCounts: Record<string, number> = {}
-    logs.forEach(log => {
+    logs.forEach((log: any) => {
       actionCounts[log.action] = (actionCounts[log.action] || 0) + 1
     })
 
     // User activity (for supervisors/admins)
     let userActivity: Record<string, number> = {}
     if (currentUser.role !== "driver") {
-      logs.forEach(log => {
+      logs.forEach((log: any) => {
         const userEmail = log.users?.email || "unknown"
         userActivity[userEmail] = (userActivity[userEmail] || 0) + 1
       })
@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
 
     // Time series data (grouped by day)
     const timeSeries: Record<string, number> = {}
-    logs.forEach(log => {
+    logs.forEach((log: any) => {
       const date = new Date(log.created_at).toISOString().split('T')[0] // YYYY-MM-DD
       timeSeries[date] = (timeSeries[date] || 0) + 1
     })
