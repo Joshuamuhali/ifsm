@@ -97,46 +97,46 @@ export default function AuthPage() {
       const message = urlParams.get('message')
       const verified = urlParams.get('verified')
 
-    if (error) {
-      switch (error) {
-        case 'email_link_expired':
-          setErrors({ login: 'Email confirmation link has expired. Please request a new one.' })
-          toast({
-            title: "Link Expired",
-            description: "Your email confirmation link has expired. Please sign up again.",
-            variant: "destructive"
-          })
-          break
-        case 'auth_failed':
-          setErrors({ login: message || 'Authentication failed. Please try again.' })
-          toast({
-            title: "Authentication Failed",
-            description: message || 'Please check your credentials and try again.',
-            variant: "destructive"
-          })
-          break
+      if (error) {
+        switch (error) {
+          case 'email_link_expired':
+            setErrors({ login: 'Email confirmation link has expired. Please request a new one.' })
+            toast({
+              title: "Link Expired",
+              description: "Your email confirmation link has expired. Please sign up again.",
+              variant: "destructive"
+            })
+            break
+          case 'auth_failed':
+            setErrors({ login: message || 'Authentication failed. Please try again.' })
+            toast({
+              title: "Authentication Failed",
+              description: message || 'Please check your credentials and try again.',
+              variant: "destructive"
+            })
+            break
+        }
+        // Clear URL parameters
+        router.push(window.location.pathname)
       }
-      // Clear URL parameters
-      router.push(window.location.pathname)
-    }
 
-    if (verified) {
-      toast({
-        title: "Email Verified!",
-        description: "Your email has been successfully confirmed.",
-      })
-      // Clear URL parameters
-      router.push(window.location.pathname)
-    }
+      if (verified) {
+        toast({
+          title: "Email Verified!",
+          description: "Your email has been successfully confirmed.",
+        })
+        // Clear URL parameters
+        router.push(window.location.pathname)
+      }
 
-    if (urlParams.get('signup') === 'success') {
-      toast({
-        title: "Account Created!",
-        description: "Your account has been successfully created.",
-      })
-      // Clear URL parameters
-      router.push(window.location.pathname)
-    }
+      if (urlParams.get('signup') === 'success') {
+        toast({
+          title: "Account Created!",
+          description: "Your account has been successfully created.",
+        })
+        // Clear URL parameters
+        router.push(window.location.pathname)
+      }
     }
   }, [toast])
 
