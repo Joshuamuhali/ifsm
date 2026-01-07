@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { testSessionManager, TestSession } from '@/lib/test-session-manager'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
@@ -61,6 +62,8 @@ function DriverTestPage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [startTime] = useState(Date.now())
   const [currentStep, setCurrentStep] = useState(0)
+  const [testSession, setTestSession] = useState<TestSession | null>(null)
+  const [sessionLoading, setSessionLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -702,12 +705,84 @@ function DriverTestPage() {
     } finally {
       setLoading(false)
     }
-  }, [testType]) // Add testType dependency here instead of in useEffect
+  }, [testType]) // Add testType dependency here instead of in}, [testType])
+
+  // Session management functions
+  const initializeTestSession = async () => {
+    if (!user || !testModule) return
+    
+    setSessionLoading(true)
+    try {
+      // Check for existing active session
+      const existingSession = await testSessionManager.getActiveSession(user.id, testType)
+      
+      if (existingSession) {
+        setTestSession(existingSession)
+        setAnswers(existingSession.answers)
+        setCurrentStep(existingSession.current_step)
+        toast({
+          title: 'Session Restored',
+          description: 'Your previous test progress has been restored.',
+        })
+      } else {
+        // Create new session
+        const newSession = await testSessionManager.createSession(
+          user.id,
+          testType,
+          testModule.sections.length,
+          testModule
+        )
+        setTestSession(newSession)
+        toast({
+          title: 'Test Started',
+          description: 'Your test session has been created.',
+        })
+      }
+    } catch (error) {
+      console.error('Error initializing test session:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to initialize test session.',
+        variant: 'destructive'
+      })
+    } finally {
+      setSessionLoading(false)
+    }
+  }
+
+  const saveProgress = async (step: number, currentAnswers: Record<string, any>) => {
+    if (!testSession || sessionLoading) return
+    
+    try {
+      await testSessionManager.saveProgress(testSession.id, step, currentAnswers)
+      setTestSession(prev => prev ? { ...prev, current_step: step, answers: currentAnswers } : null)
+    } catch (error) {
+      console.error('Error saving progress:', error)
+    }
+  }
 
   useEffect(() => {
     checkAuth()
     loadTestModule()
   }, [loadTestModule])
+
+  // Initialize session when user and test module are loaded
+  useEffect(() => {
+    if (user && testModule && !testSession) {
+      initializeTestSession()
+    }
+  }, [user, testModule, testSession])
+
+  // Auto-save progress when answers change
+  useEffect(() => {
+    if (testSession && !sessionLoading) {
+      const timeoutId = setTimeout(() => {
+        saveProgress(currentStep, answers)
+      }, 1000) // Save after 1 second of inactivity
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [answers, currentStep, testSession, sessionLoading])
 
   const handleAnswerChange = (questionId: string, answer: any) => {
     setAnswers(prev => ({
@@ -802,8 +877,8 @@ function DriverTestPage() {
       return
     }
     
-    if (!testModule || !user) {
-      console.error('Missing test module or user')
+    if (!testModule || !user || !testSession) {
+      console.error('Missing test module, user, or session')
       return
     }
 
@@ -834,11 +909,24 @@ function DriverTestPage() {
       const risk = calculateRiskScore()
       const completionTime = Date.now() - startTime
 
-      const testData = {
+      // Complete the session
+      const completedSession = await testSessionManager.completeSession(
+        testSession.id,
+        risk.totalScore,
+        risk.grade
+      )
+
+      // Save test result
+      const testResult = await testSessionManager.saveTestResult({
+        session_id: testSession.id,
         driver_id: user.id,
         test_type: testModule.name,
         status: risk.dispatchStatus,
         score: risk.totalScore,
+        max_score: 210,
+        percentage: Math.round((risk.totalScore / 210) * 100),
+        risk_level: risk.riskLevel,
+        dispatch_status: risk.dispatchStatus,
         answers,
         sections: testModule.sections.map(section => ({
           id: section.id,
@@ -852,32 +940,29 @@ function DriverTestPage() {
           }))
         })),
         completion_time_ms: completionTime,
-        created_at: new Date().toISOString(),
+        started_at: testSession.started_at,
         completed_at: new Date().toISOString()
-      }
+      })
 
-      console.log('Test data prepared:', testData)
-
-      // Save directly to Supabase database
-      const { error: saveError } = await supabase
-        .from('tests')
-        .insert(testData)
-
-      if (saveError) {
-        console.error('Error saving test to database:', saveError)
-        throw saveError
-      }
+      // Add to history
+      await testSessionManager.addToHistory(
+        user.id,
+        testSession.id,
+        testResult.id,
+        risk.totalScore,
+        risk.grade
+      )
 
       console.log('Test successfully saved to database')
 
       toast({
         title: 'Test Completed!',
-        description: 'Test results have been saved. Redirecting to results page...',
+        description: `Score: ${risk.totalScore}/210 (${risk.grade}). Redirecting to results...`,
       })
 
       console.log('Redirecting to results page...')
-      // Redirect to results page with the test ID
-      router.push(`/dashboard/driver/test/results?type=${encodeURIComponent(testModule.name)}`)
+      // Redirect to results page with the result ID
+      router.push(`/dashboard/driver/test/results?resultId=${testResult.id}`)
     } catch (error) {
       console.error('Error submitting test:', error)
       toast({

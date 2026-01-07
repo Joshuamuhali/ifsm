@@ -64,10 +64,14 @@ export default function TestResultsPage() {
 
   // Get test data from URL params or database
   useEffect(() => {
+    const resultId = searchParams.get('resultId')
     const testId = searchParams.get('testId')
     const testType = searchParams.get('type')
     
-    if (testId) {
+    if (resultId) {
+      // Load test result by ID
+      loadTestResult(resultId)
+    } else if (testId) {
       // Load existing test from database
       loadTestFromDatabase(testId)
     } else if (testType) {
@@ -83,13 +87,37 @@ export default function TestResultsPage() {
     }
   }, [])
 
+  const loadTestResult = async (resultId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('test_results')
+        .select('*')
+        .eq('id', resultId)
+        .single()
+
+      if (error) throw error
+      
+      setTestData(data)
+      calculateScoreBreakdown(data)
+    } catch (error) {
+      console.error('Error loading test result:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load test results',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const loadMostRecentTest = async (testType: string) => {
     try {
       const { data, error } = await supabase
-        .from('tests')
+        .from('test_results')
         .select('*')
         .eq('test_type', testType)
-        .order('created_at', { ascending: false })
+        .order('completed_at', { ascending: false })
         .limit(1)
         .single()
 
@@ -112,7 +140,7 @@ export default function TestResultsPage() {
   const loadTestFromDatabase = async (testId: string) => {
     try {
       const { data, error } = await supabase
-        .from('tests')
+        .from('test_results')
         .select('*')
         .eq('id', testId)
         .single()
@@ -122,7 +150,7 @@ export default function TestResultsPage() {
       setTestData(data)
       calculateScoreBreakdown(data)
     } catch (error) {
-      console.error('Error loading test:', error)
+      console.error('Error loading test from database:', error)
       toast({
         title: 'Error',
         description: 'Failed to load test results',
@@ -190,30 +218,11 @@ export default function TestResultsPage() {
   }
 
   const handleSaveTest = async () => {
-    if (!testData) return
-
-    setSaving(true)
-    try {
-      const { error } = await supabase
-        .from('tests')
-        .insert(testData)
-
-      if (error) throw error
-
-      toast({
-        title: 'Test Saved!',
-        description: 'Test results have been saved to the database.',
-      })
-    } catch (error) {
-      console.error('Error saving test:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to save test results',
-        variant: 'destructive'
-      })
-    } finally {
-      setSaving(false)
-    }
+    // Tests are already saved when submitted
+    toast({
+      title: 'Already Saved',
+      description: 'Test results are already saved in the database.',
+    })
   }
 
   const handleExportPDF = async () => {
